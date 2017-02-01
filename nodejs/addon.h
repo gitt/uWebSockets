@@ -13,6 +13,8 @@ uv_check_t check;
 Persistent<Function> noop;
 uWS::HttpRequest currentReq;
 
+Persistent<ObjectTemplate> resTemplate;
+
 void registerCheck(Isolate *isolate) {
     uv_check_init(hub.getLoop(), &check);
     check.data = isolate;
@@ -436,7 +438,13 @@ void onHttpRequest(const FunctionCallbackInfo<Value> &args) {
     group->onHttpRequest([isolate, httpRequestCallback](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
         currentReq = req;
         HandleScope hs(isolate);
-        Local<Value> argv[] = {External::New(isolate, res),
+
+        Local<ObjectTemplate> resTemplateLocal = Local<ObjectTemplate>::New(isolate, resTemplate);
+        Local<Object> resObject = resTemplateLocal->NewInstance();
+        resObject->SetAlignedPointerInInternalField(0, res);
+
+
+        Local<Value> argv[] = {/*External::New(isolate, res)*/resObject,
                                Integer::New(isolate, req.getMethod()),
                                String::NewFromUtf8(isolate, req.getUrl().value, String::kNormalString, req.getUrl().valueLength),
                                ArrayBuffer::New(isolate, (char *) data, length),
@@ -485,7 +493,10 @@ void httpWrite(const FunctionCallbackInfo<Value> &args) {
 // makes the res invalid
 void httpEnd(const FunctionCallbackInfo<Value> &args) {
     NativeString nativeString(args[1]);
-    uWS::HttpResponse *res = (uWS::HttpResponse *) args[0].As<External>()->Value();
+
+    uWS::HttpResponse *res = (uWS::HttpResponse *) args[0]->ToObject()->GetAlignedPointerFromInternalField(0);//args[0].As<External>()->Value();
+
+
     res->end(nativeString.getData(), nativeString.getLength());
 }
 

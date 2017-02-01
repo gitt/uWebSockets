@@ -7,6 +7,10 @@ void Main(Local<Object> exports) {
     exports->Set(String::NewFromUtf8(isolate, "server"), Namespace<uWS::SERVER>(isolate).object);
     exports->Set(String::NewFromUtf8(isolate, "client"), Namespace<uWS::CLIENT>(isolate).object);
 
+    Local<ObjectTemplate> resTemplateLocal = ObjectTemplate::New(isolate);
+    resTemplateLocal->SetInternalFieldCount(1);
+    resTemplate.Reset(isolate, resTemplateLocal);
+
     NODE_SET_METHOD(exports, "setUserData", setUserData<uWS::SERVER>);
     NODE_SET_METHOD(exports, "getUserData", getUserData<uWS::SERVER>);
     NODE_SET_METHOD(exports, "clearUserData", clearUserData<uWS::SERVER>);
