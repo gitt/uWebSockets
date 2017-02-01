@@ -556,11 +556,13 @@ class ServerResponse {
 
     end(data) {
         if (this.external) {
-            if (this.headLess) {
+            /*if (this.headLess) {
                 data = this.implicitHead + 'Content-Length: ' + data.length + '\r\n\r\n' + data;
                 this.headLess = false;
-            }
+            }*/
             native.server.httpEnd(this.external, data);
+        } else {
+            console.log('This response has been cancelled!');
         }
     }
 
@@ -588,7 +590,11 @@ class HttpServer extends EventEmitter {
         this.serverGroup = native.server.group.create();
 
         native.server.group.onHttpRequest(this.serverGroup, (external, verb, url, data, remainingBytes) => {
-            this.emit('request', {url: url, method: this.verbToString(verb), getHeader: native.server.getHeader}, new ServerResponse(external));
+            // link them together
+            let res = new ServerResponse(external);
+            native.setUserDataResponse(external, res);
+
+            this.emit('request', {url: url, method: this.verbToString(verb), getHeader: native.server.getHeader}, res);
         });
 
         native.server.group.onHttpUpgrade(this.serverGroup, (external, verb, url) => {
@@ -597,6 +603,9 @@ class HttpServer extends EventEmitter {
 
         native.server.group.onCancelledHttpRequest(this.serverGroup, (external) => {
             console.log('Request got invalidated!');
+
+            // mark as invalid
+            native.getUserDataResponse(external).external = null;
         });
 
         this.on('request', reqCb);

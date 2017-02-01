@@ -497,6 +497,24 @@ void getHeader(const FunctionCallbackInfo<Value> &args) {
     }
 }
 
+// set ServerResponse to the external's userData
+void setUserDataResponse(const FunctionCallbackInfo<Value> &args) {
+    uWS::HttpResponse *res = (uWS::HttpResponse *) args[0].As<External>()->Value();
+
+    new (&res->userData) Persistent<Value>(args.GetIsolate(), args[1]);
+}
+
+// get used in cancelled
+void getUserDataResponse(const FunctionCallbackInfo<Value> &args) {
+    uWS::HttpResponse *res = (uWS::HttpResponse *) args[0].As<External>()->Value();
+
+    Persistent<Object> *resObjectPersistent = (Persistent<Object> *) &res->userData;
+
+    Local<Object> resObject = Local<Object>::New(args.GetIsolate(), *resObjectPersistent);
+
+    args.GetReturnValue().Set(resObject);
+}
+
 template <bool isServer>
 struct Namespace {
     Local<Object> object;
