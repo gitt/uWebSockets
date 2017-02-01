@@ -439,12 +439,19 @@ void onHttpRequest(const FunctionCallbackInfo<Value> &args) {
         currentReq = req;
         HandleScope hs(isolate);
 
+        // instantiate a response object with automatic update of connectivity
         Local<ObjectTemplate> resTemplateLocal = Local<ObjectTemplate>::New(isolate, resTemplate);
         Local<Object> resObject = resTemplateLocal->NewInstance();
         resObject->SetAlignedPointerInInternalField(0, res);
+        if (sizeof(Persistent<Object>) != sizeof(void *)) {
+            std::cerr << "Error: sizeof(Persistent<Object>) != sizeof(void *)" << std::endl;
+            // allocate the persistent on the heap here!
+        } else {
+            new (&res->userData) Persistent<Object>(isolate, resObject);
+        }
 
 
-        Local<Value> argv[] = {/*External::New(isolate, res)*/resObject,
+        Local<Value> argv[] = {resObject,
                                Integer::New(isolate, req.getMethod()),
                                String::NewFromUtf8(isolate, req.getUrl().value, String::kNormalString, req.getUrl().valueLength),
                                ArrayBuffer::New(isolate, (char *) data, length),
@@ -462,7 +469,13 @@ void onCancelledHttpRequest(const FunctionCallbackInfo<Value> &args) {
     httpCancelledRequestCallback->Reset(isolate, Local<Function>::Cast(args[1]));
     group->onCancelledHttpRequest([isolate, httpCancelledRequestCallback](uWS::HttpResponse *res) {
         HandleScope hs(isolate);
-        Local<Value> argv[] = {External::New(isolate, res)};
+
+        // mark response as aborted
+        Persistent<Object> *resObjectPersistent = (Persistent<Object> *) &res->userData;
+        Local<Object> resObject = Local<Object>::New(isolate, *resObjectPersistent);
+        resObject->SetAlignedPointerInInternalField(0, nullptr);
+
+        Local<Value> argv[] = {resObject};
         Local<Function>::New(isolate, *httpCancelledRequestCallback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
     });
 }

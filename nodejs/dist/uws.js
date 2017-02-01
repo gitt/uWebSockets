@@ -514,6 +514,8 @@ class Server extends EventEmitter {
     }
 }
 
+// not used, moved into C++
+// similar logic should be implemented inside of uws itself
 class ServerResponse {
 
     constructor(external) {
@@ -569,6 +571,7 @@ class ServerResponse {
     }
 }
 
+// this whole thing could also be moved into C++
 class HttpServer extends EventEmitter {
 
     verbToString(verb) {
@@ -587,16 +590,16 @@ class HttpServer extends EventEmitter {
         super();
         this.serverGroup = native.server.group.create();
 
-        native.server.group.onHttpRequest(this.serverGroup, (external, verb, url, data, remainingBytes) => {
-            this.emit('request', {url: url, method: this.verbToString(verb), getHeader: native.server.getHeader}, new ServerResponse(external));
+        native.server.group.onHttpRequest(this.serverGroup, (res, verb, url, data, remainingBytes) => {
+            this.emit('request', {url: url, method: this.verbToString(verb), getHeader: native.server.getHeader}, res);
         });
 
-        native.server.group.onHttpUpgrade(this.serverGroup, (external, verb, url) => {
-            this.emit('upgrade', {url: url, method: this.verbToString(verb), getHeader: native.server.getHeader}, new ServerResponse(external));
+        native.server.group.onHttpUpgrade(this.serverGroup, (res, verb, url) => {
+            this.emit('upgrade', {url: url, method: this.verbToString(verb), getHeader: native.server.getHeader}, res);
         });
 
-        native.server.group.onCancelledHttpRequest(this.serverGroup, (external) => {
-            console.log('Request got invalidated!');
+        native.server.group.onCancelledHttpRequest(this.serverGroup, (res) => {
+            // emit abort here!
         });
 
         this.on('request', reqCb);
