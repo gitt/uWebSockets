@@ -10,6 +10,9 @@ void resEnd(const FunctionCallbackInfo<Value> &args) {
     }
 
     NativeString nativeString(args[0]);
+
+    ((Persistent<Value> *) &res->userData)->Reset();
+    ((Persistent<Value> *) &res->userData)->~Persistent<Value>();
     res->end(nativeString.getData(), nativeString.getLength());
 }
 
